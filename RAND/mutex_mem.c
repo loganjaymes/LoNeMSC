@@ -4,38 +4,42 @@
 #include <pthread.h>
 #include <unistd.h>
 
-void* myturn(void* arg) {
-	int* iptr = (int*)malloc(sizeof(int));
-	*iptr = 5;
+uint32_t counter = 0;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 
-	for (int i = 0; i < 8; ++i) {
-		sleep(1);
-		printf("Me me me! %d\n", *iptr);
-		(*iptr)++;
+void* loop(void* arg) {
+	uint32_t* id  = (uint32_t*)arg;
+
+	while (counter < 10) {
+		pthread_mutex_lock(&lock);
+		if (*id == 17 && counter % 2 == 1) {  // thread = odds, main = evens
+			printf("%d [%d]\n", counter, *id);
+			counter++;
+		} else if (*id == 9 && counter % 2 == 0) {
+			printf("%d [%d]\n", counter, *id);
+			counter++;
+		} else {
+			printf("Conditions not met...\n");
+		}
+
+		pthread_mutex_unlock(&lock);
 	}
 
-	return iptr;
-}
-
-void yourturn() {
-	for (int i = 0; i < 3; ++i) {
-		sleep(2);
-		printf("You you you!\n");
-	}
+	return NULL;
 }
 
 int main(void) {
-	pthread_t my_thread;
-	int* res;
+	pthread_t res;
+	uint32_t t_id = 17;
+	uint32_t m_id = 9;
 
-	// if using int declared in main, we'd just pass (int res) {res} into the 2nd NULL, and ignore the malloc in myturn
-	pthread_create(&my_thread, NULL, myturn, NULL);
+
+	pthread_create(&res, NULL, loop, &t_id);
+
+	loop(&m_id);
+
+	pthread_join(res, (void *)&res);
+	// printf("Thread done- id=%d\n", res); // leftover code from another example, but would return the id value from the thread function if we did not pass m_id into it (sometimes ret t_id, sometimes m_id)
 	
-	yourturn();
-
-	pthread_join(my_thread, (void *)&res);
-	printf("Thread done- v=%d\n", *res);
-
-	free(res);
-
+	return 0;
 }
